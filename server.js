@@ -22,7 +22,7 @@ const MIME_TYPES = {
 
 function setCorsHeaders(res) {
   res.setHeader('Access-Control-Allow-Origin', ALLOWED_ORIGIN);
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-User-Id');
 }
 
@@ -106,6 +106,96 @@ function buildChatList(store, userId) {
     });
 }
 
+function toIsoDateString(input = new Date()) {
+  const date = input instanceof Date ? input : new Date(input);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function sanitizeSlot(slot) {
+  return String(slot || '').trim();
+}
+
+function parseTimeToMinutes(value) {
+  const [h, m] = String(value || '').split(':');
+  const hour = Number(h);
+  const minute = Number(m);
+  if (!Number.isInteger(hour) || !Number.isInteger(minute)) {
+    return Number.NaN;
+  }
+  return hour * 60 + minute;
+}
+
+function sortSlots(slots) {
+  return [...slots].sort((a, b) => parseTimeToMinutes(a) - parseTimeToMinutes(b));
+}
+
+function pickBestSlot(slots, preferredTime) {
+  if (!slots.length) {
+    return null;
+  }
+
+  const preferred = parseTimeToMinutes(preferredTime);
+  if (Number.isNaN(preferred)) {
+    return sortSlots(slots)[0];
+  }
+
+  return [...slots].sort((left, right) => {
+    const leftDelta = Math.abs(parseTimeToMinutes(left) - preferred);
+    const rightDelta = Math.abs(parseTimeToMinutes(right) - preferred);
+    return leftDelta - rightDelta;
+  })[0];
+}
+
+function ensureDoctorSchedules(store) {
+  if (!store.doctorSchedules || typeof store.doctorSchedules !== 'object') {
+    store.doctorSchedules = {};
+  }
+}
+
+function getConfiguredSlotsForDate(store, doctorId, date) {
+  ensureDoctorSchedules(store);
+  const doctor = findDoctor(store, doctorId);
+  if (!doctor) {
+    return [];
+  }
+
+  const scopedSchedule = store.doctorSchedules[doctorId] || {};
+  const custom = scopedSchedule[date];
+  const baseSlots = Array.isArray(custom) ? custom : doctor.availableSlots || [];
+  return sortSlots([...new Set(baseSlots.map(sanitizeSlot).filter(Boolean))]);
+}
+
+function getAvailableSlotsForDate(store, doctorId, date, options = {}) {
+  const configuredSlots = getConfiguredSlotsForDate(store, doctorId, date);
+  const blocked = new Set(
+    store.appointments
+      .filter(
+        (appointment) =>
+          appointment.status === 'scheduled' &&
+          appointment.doctorId === doctorId &&
+          appointment.date === date &&
+          appointment.id !== options.ignoreAppointmentId
+      )
+      .map((appointment) => appointment.time)
+  );
+
+  return configuredSlots.filter((slot) => !blocked.has(slot));
+}
+
+function hasUserConflict(store, userId, date, time, ignoreAppointmentId) {
+  return store.appointments.some(
+    (appointment) =>
+      appointment.status === 'scheduled' &&
+      appointment.userId === userId &&
+      appointment.date === date &&
+      appointment.time === time &&
+      appointment.id !== ignoreAppointmentId
+  );
+}
+
 async function handleApi(req, res, url) {
   const store = await readStore();
   const userId = getUserId(req, store);
@@ -181,7 +271,178 @@ async function handleApi(req, res, url) {
     return sendJson(res, 200, { doctors });
   }
 
-  if (req.method === 'GET' && url.pathname.startsWith('/api/doctors/')) {
+  if (req.method === 'GET' && url.pathname.startsWith('/api/doctors/') && url.pathname.endsWith('/schedule')) {
+    const doctorId = url.pathname.split('/')[3];
+    const doctor = findDoctor(store, doctorId);
+    if (!doctor) {
+      return sendJson(res, 404, { error: 'Doctor not found.' });
+    }
+
+    const date = url.searchParams.get('date') || toIsoDateString();
+    const configuredSlots = getConfiguredSlotsForDate(store, doctorId, date);
+    const availableSlots = getAvailableSlotsForDate(store, doctorId, date);
+    return sendJson(res, 200, {
+      doctorId,
+      date,
+      configuredSlots,
+      availableSlots
+    });
+  }
+
+  if (req.method === 'PUT' && url.pathname.startsWith('/api/doctors/') && url.pathname.endsWith('/schedule')) {
+    const doctorId = url.pathname.split('/')[3];
+    const doctor = findDoctor(store, doctorId);
+    if (!doctor) {
+      return sendJson(res, 404, { error: 'Doctor not found.' });
+    }
+
+    const body = await parseJsonBody(req);
+    if (!body || !body.date || !Array.isArray(body.slots)) {
+      return sendJson(res, 400, { error: 'date and slots[] are required.' });
+    }
+
+    const sanitizedSlots = sortSlots([...new Set(body.slots.map(sanitizeSlot).filter(Boolean))]);
+    ensureDoctorSchedules(store);
+    if (!store.doctorSchedules[doctorId]) {
+      store.doctorSchedules[doctorId] = {};
+    }
+    store.doctorSchedules[doctorId][body.date] = sanitizedSlots;
+    await writeStore(store);
+
+    return sendJson(res, 200, {
+      doctorId,
+      date: body.date,
+      configuredSlots: sanitizedSlots,
+      availableSlots: getAvailableSlotsForDate(store, doctorId, body.date)
+    });
+  }
+
+  if (req.method === 'GET' && url.pathname === '/api/smart-appointments/recommendations') {
+    const symptom = String(url.searchParams.get('symptom') || '').trim().toLowerCase();
+    const preferredTime = String(url.searchParams.get('preferredTime') || '').trim();
+    const date = String(url.searchParams.get('date') || toIsoDateString()).trim();
+    const favoriteSet = new Set(store.favorites[user.id] || []);
+
+    const recommendations = store.doctors
+      .map((doctor) => {
+        const availableSlots = getAvailableSlotsForDate(store, doctor.id, date);
+        const suggestedSlot = pickBestSlot(availableSlots, preferredTime);
+        const symptomMatch = symptom
+          ? doctor.symptoms.some((entry) => entry.toLowerCase().includes(symptom)) ||
+            doctor.category.toLowerCase().includes(symptom) ||
+            doctor.specialty.toLowerCase().includes(symptom)
+          : false;
+
+        let score = doctor.rating;
+        if (favoriteSet.has(doctor.id)) {
+          score += 1.2;
+        }
+        if (symptomMatch) {
+          score += 2.5;
+        }
+        if (doctor.chatAvailable) {
+          score += 0.3;
+        }
+
+        return {
+          doctor: {
+            ...doctor,
+            favorite: favoriteSet.has(doctor.id)
+          },
+          date,
+          score: Number(score.toFixed(2)),
+          suggestedSlot,
+          availableSlotCount: availableSlots.length
+        };
+      })
+      .filter((entry) => entry.availableSlotCount > 0)
+      .sort((left, right) => right.score - left.score)
+      .slice(0, 6);
+
+    return sendJson(res, 200, { recommendations });
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/appointments/smart-book') {
+    const body = await parseJsonBody(req);
+    if (!body) {
+      return sendJson(res, 400, { error: 'Invalid payload.' });
+    }
+
+    const symptom = String(body.symptom || '').trim().toLowerCase();
+    const preferredTime = String(body.preferredTime || '').trim();
+    const date = String(body.date || toIsoDateString()).trim();
+    const reason = String(body.reason || (symptom ? `Smart booking for ${symptom}` : 'Smart booking consultation'));
+    const favoriteSet = new Set(store.favorites[user.id] || []);
+
+    const rankedDoctors = store.doctors
+      .map((doctor) => {
+        const symptomMatch = symptom
+          ? doctor.symptoms.some((entry) => entry.toLowerCase().includes(symptom)) ||
+            doctor.category.toLowerCase().includes(symptom) ||
+            doctor.specialty.toLowerCase().includes(symptom)
+          : false;
+
+        let score = doctor.rating;
+        if (favoriteSet.has(doctor.id)) {
+          score += 1.2;
+        }
+        if (symptomMatch) {
+          score += 2.5;
+        }
+        return { doctor, score };
+      })
+      .sort((left, right) => right.score - left.score);
+
+    let selectedDoctor = null;
+    let selectedSlot = null;
+    for (const entry of rankedDoctors) {
+      const availableSlots = getAvailableSlotsForDate(store, entry.doctor.id, date);
+      const sortedByPreference = preferredTime
+        ? [...availableSlots].sort(
+            (left, right) =>
+              Math.abs(parseTimeToMinutes(left) - parseTimeToMinutes(preferredTime)) -
+              Math.abs(parseTimeToMinutes(right) - parseTimeToMinutes(preferredTime))
+          )
+        : availableSlots;
+
+      const freeSlot = sortedByPreference.find((slot) => !hasUserConflict(store, user.id, date, slot));
+      if (freeSlot) {
+        selectedDoctor = entry.doctor;
+        selectedSlot = freeSlot;
+        break;
+      }
+    }
+
+    if (!selectedDoctor || !selectedSlot) {
+      return sendJson(res, 409, { error: 'No smart slot available for the selected preferences.' });
+    }
+
+    const appointment = {
+      id: parseId('a'),
+      userId: user.id,
+      doctorId: selectedDoctor.id,
+      date,
+      time: selectedSlot,
+      status: 'scheduled',
+      reason
+    };
+
+    store.appointments.push(appointment);
+    await writeStore(store);
+    return sendJson(res, 201, {
+      appointment: attachDoctorData(appointment, store),
+      smart: {
+        matchedSymptom: symptom || null,
+        selectedSlot
+      }
+    });
+  }
+
+  if (
+    req.method === 'GET' &&
+    url.pathname.startsWith('/api/doctors/') &&
+    url.pathname.split('/').length === 4
+  ) {
     const doctorId = url.pathname.split('/')[3];
     const doctor = findDoctor(store, doctorId);
     if (!doctor) {
@@ -242,6 +503,19 @@ async function handleApi(req, res, url) {
       return sendJson(res, 404, { error: 'Doctor not found.' });
     }
 
+    const availableSlots = getAvailableSlotsForDate(store, doctor.id, body.date);
+    if (!availableSlots.includes(body.time)) {
+      return sendJson(res, 409, {
+        error: 'Selected time is not available. Please choose an open slot from doctor schedule.'
+      });
+    }
+
+    if (hasUserConflict(store, user.id, body.date, body.time)) {
+      return sendJson(res, 409, {
+        error: 'You already have a scheduled appointment at this time.'
+      });
+    }
+
     const appointment = {
       id: parseId('a'),
       userId: user.id,
@@ -270,6 +544,30 @@ async function handleApi(req, res, url) {
 
     if (!appointment) {
       return sendJson(res, 404, { error: 'Appointment not found.' });
+    }
+
+    const nextStatus =
+      body.status && ['scheduled', 'completed', 'cancelled'].includes(body.status)
+        ? body.status
+        : appointment.status;
+    const nextDate = body.date || appointment.date;
+    const nextTime = body.time || appointment.time;
+
+    if (nextStatus === 'scheduled') {
+      const availableSlots = getAvailableSlotsForDate(store, appointment.doctorId, nextDate, {
+        ignoreAppointmentId: appointment.id
+      });
+      if (!availableSlots.includes(nextTime)) {
+        return sendJson(res, 409, {
+          error: 'Reschedule failed because this doctor slot is no longer available.'
+        });
+      }
+
+      if (hasUserConflict(store, user.id, nextDate, nextTime, appointment.id)) {
+        return sendJson(res, 409, {
+          error: 'You already have another scheduled appointment at this time.'
+        });
+      }
     }
 
     if (body.status && ['scheduled', 'completed', 'cancelled'].includes(body.status)) {

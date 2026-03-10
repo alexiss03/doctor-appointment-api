@@ -17,6 +17,9 @@ This project includes a full doctor appointment booking flow with a built-in Nod
 - Thank-you confirmation screen after booking
 - Responsive layout for desktop web and mobile browsers
 - PWA support (installable on mobile/desktop with offline app shell cache)
+- Smart appointment recommendations by symptom/date/time
+- Smart auto-booking (best doctor + nearest open slot)
+- Doctor day schedule management with date-based available slots
 
 ## Backend APIs
 
@@ -26,11 +29,15 @@ This project includes a full doctor appointment booking flow with a built-in Nod
 - `GET /api/symptoms`
 - `GET /api/doctors`
 - `GET /api/doctors/:id`
+- `GET /api/doctors/:id/schedule?date=YYYY-MM-DD`
+- `PUT /api/doctors/:id/schedule`
 - `GET /api/favorites`
 - `POST /api/favorites/:doctorId` (toggle)
 - `GET /api/appointments`
 - `POST /api/appointments`
+- `POST /api/appointments/smart-book`
 - `PATCH /api/appointments/:id`
+- `GET /api/smart-appointments/recommendations`
 - `GET /api/chats`
 - `GET /api/chats/:doctorId/messages`
 - `POST /api/chats/:doctorId/messages`

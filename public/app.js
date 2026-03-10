@@ -14,7 +14,14 @@ const state = {
   category: '',
   specialistSearch: '',
   specialistCategory: '',
-  selectedDoctorId: null
+  selectedDoctorId: null,
+  smartSymptom: '',
+  smartDate: '',
+  smartPreferredTime: '',
+  smartRecommendations: [],
+  detailDate: '',
+  detailConfiguredSlots: [],
+  detailAvailableSlots: []
 };
 
 const view = document.getElementById('view');
@@ -30,6 +37,14 @@ const formatter = new Intl.DateTimeFormat('en-US', {
   day: 'numeric',
   year: 'numeric'
 });
+
+function todayIso() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 
 const API_BASE_URL = String(window.__APP_CONFIG__?.API_BASE_URL || '').replace(/\/+$/, '');
 
@@ -81,6 +96,10 @@ function formatDate(value) {
 
 function getDoctorById(id) {
   return state.doctors.find((doctor) => doctor.id === id) || null;
+}
+
+function getAppointmentById(id) {
+  return state.appointments.find((appointment) => appointment.id === id) || null;
 }
 
 function doctorCard(doctor, options = {}) {
@@ -150,6 +169,38 @@ function renderLogin() {
   `;
 }
 
+function renderSmartRecommendations() {
+  if (!state.smartRecommendations.length) {
+    return '<p class="muted">No smart suggestions yet. Add symptom and date, then tap Suggest.</p>';
+  }
+
+  return state.smartRecommendations
+    .map((entry) => {
+      const doctor = entry.doctor;
+      return `
+        <article class="appointment-item">
+          <div class="doctor-title-row">
+            <div>
+              <h4>${doctor.name}</h4>
+              <p class="muted">${doctor.specialty} • Score ${entry.score}</p>
+            </div>
+            <span class="badge scheduled">${entry.suggestedSlot || 'No slot'}</span>
+          </div>
+          <p class="muted">${entry.date} • ${entry.availableSlotCount} slots open</p>
+          <div class="row-actions">
+            <button class="ghost-btn" data-action="smart-open-doctor" data-doctor-id="${doctor.id}" type="button">Details</button>
+            ${
+              entry.suggestedSlot
+                ? `<button class="solid-btn" data-action="smart-book-selected" data-doctor-id="${doctor.id}" data-slot="${entry.suggestedSlot}" type="button">Book ${entry.suggestedSlot}</button>`
+                : ''
+            }
+          </div>
+        </article>
+      `;
+    })
+    .join('');
+}
+
 function renderHome() {
   const filteredDoctors = state.doctors.filter((doctor) => {
     const search = state.search.toLowerCase();
@@ -187,6 +238,19 @@ function renderHome() {
             .map((symptom) => `<button class="chip" data-action="symptom-search" data-value="${symptom}">${symptom}</button>`)
             .join('')}
         </div>
+
+        <h3 style="margin-top:14px;">Smart Appointment</h3>
+        <div class="search-row">
+          <input id="smartSymptom" placeholder="Symptom (e.g. Fever)" value="${state.smartSymptom}" />
+          <input id="smartDate" type="date" value="${state.smartDate || todayIso()}" />
+        </div>
+        <div class="search-row" style="margin-top:8px;">
+          <input id="smartPreferredTime" placeholder="Preferred time (HH:MM)" value="${state.smartPreferredTime}" />
+          <button class="solid-btn" data-action="smart-suggest" type="button">Suggest</button>
+        </div>
+        <div class="row-actions" style="margin-top:8px;">
+          <button class="ghost-btn" data-action="smart-auto-book" type="button">Auto Book Best Slot</button>
+        </div>
       </article>
 
       <article class="panel">
@@ -196,6 +260,10 @@ function renderHome() {
         </div>
         <div class="row-actions" style="margin-top:12px;">
           <button class="ghost-btn" data-action="go-specialists" type="button">See All Specialists</button>
+        </div>
+        <h3 style="margin-top:14px;">Smart Suggestions</h3>
+        <div class="appointment-stack">
+          ${renderSmartRecommendations()}
         </div>
       </article>
     </section>
@@ -339,7 +407,9 @@ function renderDetails() {
     `;
   }
 
-  const slots = doctor.availableSlots || [];
+  const dateValue = state.detailDate || todayIso();
+  const configuredSlots = state.detailConfiguredSlots || [];
+  const availableSlots = state.detailAvailableSlots || [];
   return `
     <section class="grid-two">
       <article class="panel">
@@ -353,23 +423,38 @@ function renderDetails() {
             <p class="muted">${doctor.bio}</p>
           </div>
         </article>
+        <h3 style="margin-top:14px;">Doctor Schedule (${dateValue})</h3>
+        <p class="muted">Configured: ${configuredSlots.length ? configuredSlots.join(', ') : 'No slots configured'}</p>
+        <p class="muted">Available now: ${availableSlots.length ? availableSlots.join(', ') : 'Fully booked'}</p>
       </article>
 
       <article class="panel">
         <h2>Book Appointment</h2>
         <form id="bookForm">
           <label>Date</label>
-          <input name="date" type="date" required />
+          <div class="search-row">
+            <input id="detailDateInput" name="date" type="date" value="${dateValue}" required />
+            <button class="ghost-btn" data-action="load-doctor-schedule" type="button">Check</button>
+          </div>
           <label>Select Time</label>
           <select name="time" required>
             <option value="">Choose slot</option>
-            ${slots.map((slot) => `<option value="${slot}">${slot}</option>`).join('')}
+            ${availableSlots.map((slot) => `<option value="${slot}">${slot}</option>`).join('')}
           </select>
           <label>Reason</label>
           <textarea name="reason" placeholder="Symptoms or concern"></textarea>
           <div class="row-actions" style="margin-top:12px;">
             <button class="ghost-btn" data-action="go-home" type="button">Cancel</button>
             <button class="solid-btn" type="submit">Book Appointment</button>
+          </div>
+        </form>
+        <h3 style="margin-top:16px;">Manage Doctor Day Schedule</h3>
+        <form id="scheduleForm">
+          <label>Slots for ${dateValue} (comma separated)</label>
+          <input name="slots" placeholder="09:00, 11:30, 15:00" value="${configuredSlots.join(', ')}" />
+          <div class="row-actions" style="margin-top:12px;">
+            <button class="ghost-btn" data-action="load-doctor-schedule" type="button">Refresh</button>
+            <button class="solid-btn" type="submit">Save Schedule</button>
           </div>
         </form>
       </article>
@@ -472,8 +557,21 @@ async function loadChatMessages(doctorId) {
   state.activeChatMessages = payload.messages || [];
 }
 
+async function loadDoctorSchedule(doctorId, date) {
+  if (!doctorId || !date) {
+    return;
+  }
+  const payload = await api(`/api/doctors/${doctorId}/schedule?date=${encodeURIComponent(date)}`);
+  state.detailDate = payload.date;
+  state.detailConfiguredSlots = payload.configuredSlots || [];
+  state.detailAvailableSlots = payload.availableSlots || [];
+}
+
 async function hydrateDashboard() {
   await Promise.all([loadDoctors(), loadCategoriesAndSymptoms(), loadFavorites(), loadAppointments(), loadChats()]);
+  if (!state.smartDate) {
+    state.smartDate = todayIso();
+  }
   if (state.activeChatDoctorId) {
     await loadChatMessages(state.activeChatDoctorId);
   }
@@ -531,18 +629,96 @@ async function submitBooking(form) {
     return;
   }
 
-  await api('/api/appointments', {
-    method: 'POST',
-    body: JSON.stringify({
-      doctorId: doctor.id,
-      date,
-      time,
-      reason
-    })
-  });
+  try {
+    await api('/api/appointments', {
+      method: 'POST',
+      body: JSON.stringify({
+        doctorId: doctor.id,
+        date,
+        time,
+        reason
+      })
+    });
 
-  await loadAppointments();
-  setScreen('thankyou');
+    await Promise.all([loadAppointments(), loadDoctorSchedule(doctor.id, date)]);
+    setScreen('thankyou');
+  } catch (err) {
+    showToast(err.message);
+  }
+}
+
+async function submitSchedule(form) {
+  const doctor = getDoctorById(state.selectedDoctorId);
+  if (!doctor) {
+    return;
+  }
+
+  const data = new FormData(form);
+  const date = state.detailDate || String(document.getElementById('detailDateInput')?.value || todayIso());
+  const rawSlots = String(data.get('slots') || '');
+  const slots = rawSlots
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+  try {
+    await api(`/api/doctors/${doctor.id}/schedule`, {
+      method: 'PUT',
+      body: JSON.stringify({ date, slots })
+    });
+    await loadDoctorSchedule(doctor.id, date);
+    render();
+    showToast('Doctor schedule updated.');
+  } catch (err) {
+    showToast(err.message);
+  }
+}
+
+function readSmartInputs() {
+  state.smartSymptom = String(document.getElementById('smartSymptom')?.value || '').trim();
+  state.smartDate = String(document.getElementById('smartDate')?.value || todayIso()).trim();
+  state.smartPreferredTime = String(document.getElementById('smartPreferredTime')?.value || '').trim();
+}
+
+async function runSmartSuggestions() {
+  readSmartInputs();
+  const params = new URLSearchParams();
+  if (state.smartSymptom) {
+    params.set('symptom', state.smartSymptom);
+  }
+  if (state.smartDate) {
+    params.set('date', state.smartDate);
+  }
+  if (state.smartPreferredTime) {
+    params.set('preferredTime', state.smartPreferredTime);
+  }
+
+  try {
+    const payload = await api(`/api/smart-appointments/recommendations?${params.toString()}`);
+    state.smartRecommendations = payload.recommendations || [];
+    render();
+  } catch (err) {
+    showToast(err.message);
+  }
+}
+
+async function runSmartAutoBook() {
+  readSmartInputs();
+  try {
+    await api('/api/appointments/smart-book', {
+      method: 'POST',
+      body: JSON.stringify({
+        symptom: state.smartSymptom,
+        date: state.smartDate || todayIso(),
+        preferredTime: state.smartPreferredTime,
+        reason: state.smartSymptom ? `Smart booking for ${state.smartSymptom}` : 'Smart booking consultation'
+      })
+    });
+    await loadAppointments();
+    setScreen('thankyou');
+  } catch (err) {
+    showToast(err.message);
+  }
 }
 
 async function submitChat(form) {
@@ -654,7 +830,54 @@ function attachGlobalListeners() {
 
     if (action === 'symptom-search') {
       state.search = value || '';
+      state.smartSymptom = value || '';
       render();
+      return;
+    }
+
+    if (action === 'smart-suggest') {
+      await runSmartSuggestions();
+      return;
+    }
+
+    if (action === 'smart-auto-book') {
+      await runSmartAutoBook();
+      return;
+    }
+
+    if (action === 'smart-open-doctor' && doctorId) {
+      state.selectedDoctorId = doctorId;
+      state.detailDate = state.smartDate || todayIso();
+      try {
+        await loadDoctorSchedule(doctorId, state.detailDate);
+      } catch (err) {
+        showToast(err.message);
+      }
+      setScreen('details');
+      return;
+    }
+
+    if (action === 'smart-book-selected' && doctorId) {
+      const slot = actionNode.dataset.slot;
+      if (!slot) {
+        return;
+      }
+      const date = state.smartDate || todayIso();
+      try {
+        await api('/api/appointments', {
+          method: 'POST',
+          body: JSON.stringify({
+            doctorId,
+            date,
+            time: slot,
+            reason: state.smartSymptom ? `Suggested for ${state.smartSymptom}` : 'Smart suggested booking'
+          })
+        });
+        await loadAppointments();
+        setScreen('thankyou');
+      } catch (err) {
+        showToast(err.message);
+      }
       return;
     }
 
@@ -680,7 +903,29 @@ function attachGlobalListeners() {
 
     if ((action === 'details' || action === 'book-flow') && doctorId) {
       state.selectedDoctorId = doctorId;
+      state.detailDate = todayIso();
+      try {
+        await loadDoctorSchedule(doctorId, state.detailDate);
+      } catch (err) {
+        showToast(err.message);
+      }
       setScreen('details');
+      return;
+    }
+
+    if (action === 'load-doctor-schedule') {
+      const doctor = getDoctorById(state.selectedDoctorId);
+      if (!doctor) {
+        return;
+      }
+      const dateInput = document.getElementById('detailDateInput');
+      const date = String(dateInput?.value || state.detailDate || todayIso());
+      try {
+        await loadDoctorSchedule(doctor.id, date);
+      } catch (err) {
+        showToast(err.message);
+      }
+      render();
       return;
     }
 
@@ -701,12 +946,34 @@ function attachGlobalListeners() {
     }
 
     if (action === 'reschedule-appt' && id) {
-      const newDate = window.prompt('Enter new date (YYYY-MM-DD):');
+      const appointment = getAppointmentById(id);
+      if (!appointment) {
+        return;
+      }
+
+      const newDate = window.prompt('Enter new date (YYYY-MM-DD):', appointment.date);
       if (!newDate) {
         return;
       }
-      const newTime = window.prompt('Enter new time (HH:MM):');
-      if (!newTime) {
+
+      let available = [];
+      try {
+        const schedule = await api(
+          `/api/doctors/${appointment.doctorId}/schedule?date=${encodeURIComponent(newDate)}`
+        );
+        available = schedule.availableSlots || [];
+      } catch (_err) {
+        // fallback to manual input when schedule fetch fails
+      }
+
+      const promptLabel = available.length
+        ? `Enter new time from available slots: ${available.join(', ')}`
+        : 'Enter new time (HH:MM):';
+      const newTime = window.prompt(promptLabel, appointment.time);
+      if (!newTime || (available.length && !available.includes(newTime))) {
+        if (available.length) {
+          showToast('Pick a valid slot from the available schedule.');
+        }
         return;
       }
       await updateAppointment(id, { date: newDate, time: newTime, status: 'scheduled' });
@@ -733,6 +1000,11 @@ function attachGlobalListeners() {
       return;
     }
 
+    if (form.id === 'scheduleForm') {
+      await submitSchedule(form);
+      return;
+    }
+
     if (form.id === 'chatForm') {
       await submitChat(form);
     }
@@ -741,6 +1013,7 @@ function attachGlobalListeners() {
 
 async function bootstrap() {
   attachGlobalListeners();
+  state.smartDate = todayIso();
   render();
 
   if ('serviceWorker' in navigator) {
