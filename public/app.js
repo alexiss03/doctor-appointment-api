@@ -31,8 +31,17 @@ const formatter = new Intl.DateTimeFormat('en-US', {
   year: 'numeric'
 });
 
+const API_BASE_URL = String(window.__APP_CONFIG__?.API_BASE_URL || '').replace(/\/+$/, '');
+
+function resolveApiUrl(path) {
+  if (/^https?:\/\//i.test(path)) {
+    return path;
+  }
+  return API_BASE_URL ? `${API_BASE_URL}${path}` : path;
+}
+
 function api(path, options = {}) {
-  return fetch(path, {
+  return fetch(resolveApiUrl(path), {
     headers: {
       'Content-Type': 'application/json',
       ...(options.headers || {})

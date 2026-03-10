@@ -52,6 +52,23 @@ npm start
 http://localhost:3000
 ```
 
+## Deploy Frontend On Render
+
+Use a **Static Site** service in Render:
+
+1. New `Static Site` -> connect this GitHub repo.
+2. Branch: `main`
+3. Build command: leave empty
+4. Publish directory: `public`
+5. Deploy
+
+Frontend API target is controlled in [public/config.js](/Users/maryalexissolis/Documents/doctor-appointment/public/config.js).
+Current value points to:
+
+`https://doctor-appointment-api-esie.onrender.com`
+
+If backend URL changes, update `public/config.js` and redeploy.
+
 ## Native iOS (SwiftUI)
 
 Native iOS project path:

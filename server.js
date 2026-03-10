@@ -6,6 +6,7 @@ const { URL } = require('url');
 const PORT = process.env.PORT || 3000;
 const STORE_PATH = path.join(__dirname, 'data', 'store.json');
 const PUBLIC_DIR = path.join(__dirname, 'public');
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || '*';
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -18,6 +19,12 @@ const MIME_TYPES = {
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon'
 };
+
+function setCorsHeaders(res) {
+  res.setHeader('Access-Control-Allow-Origin', ALLOWED_ORIGIN);
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-User-Id');
+}
 
 function sendJson(res, statusCode, payload) {
   const body = JSON.stringify(payload);
@@ -385,6 +392,13 @@ async function serveStatic(req, res, url) {
 }
 
 const server = http.createServer(async (req, res) => {
+  setCorsHeaders(res);
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
+
   const url = new URL(req.url, `http://${req.headers.host}`);
 
   if (url.pathname.startsWith('/api/')) {

@@ -1,5 +1,5 @@
-const CACHE_NAME = 'doc-time-saver-v1';
-const APP_SHELL = ['/', '/index.html', '/styles.css', '/app.js', '/manifest.json', '/icons/icon.svg'];
+const CACHE_NAME = 'doc-time-saver-v2';
+const APP_SHELL = ['/', '/index.html', '/styles.css', '/app.js', '/config.js', '/manifest.json', '/icons/icon.svg'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
