@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#8f1d5d" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <title>Doctor Appointment Booking</title>
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icons/icon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="background-orb orb-a"></div>
+    <div class="background-orb orb-b"></div>
+    <div class="background-orb orb-c"></div>
+
+    <main class="app-shell">
+      <header class="top-header">
+        <button id="menuToggle" class="icon-btn" type="button">☰</button>
+        <div>
+          <p class="tiny-label">Doctor Appointment</p>
+          <h1>Doc Time Saver</h1>
+        </div>
+        <button id="refreshBtn" class="icon-btn" type="button">↻</button>
+      </header>
+
+      <aside id="drawer" class="drawer">
+        <div class="drawer-head">
+          <h2>Menu</h2>
+          <button id="closeDrawer" class="icon-btn" type="button">✕</button>
+        </div>
+        <button class="drawer-link" data-screen="home">Appointments</button>
+        <button class="drawer-link" data-screen="specialists">My Doctor</button>
+        <button class="drawer-link" data-screen="chat">Chat</button>
+        <button class="drawer-link" data-screen="favorites">Favorites</button>
+        <button class="drawer-link" data-screen="appointments">Schedule</button>
+      </aside>
+
+      <section id="view" class="view"></section>
+
+      <nav class="bottom-nav">
+        <button class="nav-link active" data-screen="home">Home</button>
+        <button class="nav-link" data-screen="favorites">Favorites</button>
+        <button class="nav-link" data-screen="appointments">Schedule</button>
+        <button class="nav-link" data-screen="chat">Chat</button>
+      </nav>
+    </main>
+
+    <template id="doctorCardTemplate">
+      <article class="doctor-card">
+        <img class="doctor-image" alt="Doctor profile" />
+        <div class="doctor-content">
+          <div class="doctor-title-row">
+            <div>
+              <h3 class="doctor-name"></h3>
+              <p class="doctor-sub"></p>
+            </div>
+            <button class="icon-btn favorite-btn" type="button">♡</button>
+          </div>
+          <p class="doctor-meta"></p>
+          <div class="doctor-actions">
+            <button class="ghost-btn details-btn" type="button">Details</button>
+            <button class="solid-btn book-btn" type="button">Make Appointment</button>
+          </div>
+        </div>
+      </article>
+    </template>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>

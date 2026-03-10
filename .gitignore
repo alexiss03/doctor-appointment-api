@@ -1,0 +1,22 @@
+# Node
+node_modules/
+npm-debug.log*
+
+# macOS
+.DS_Store
+
+# Xcode / iOS
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.moved-aside
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Local env
+.env
+.env.*
+
+# Logs
+*.log

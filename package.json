@@ -1,0 +1,9 @@
+{
+  "name": "doctor-appointment",
+  "version": "1.0.0",
+  "description": "Doctor appointment booking app with backend",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

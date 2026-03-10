@@ -1,0 +1,120 @@
+{
+  "users": [
+    {
+      "id": "u1",
+      "name": "Mary",
+      "email": "mary@example.com",
+      "password": "password123"
+    }
+  ],
+  "currentUserId": "u1",
+  "doctors": [
+    {
+      "id": "d1",
+      "name": "Dr. Marcus Turner",
+      "specialty": "Heart Specialist",
+      "experience": 8,
+      "fee": 120,
+      "location": "Chandigarh",
+      "rating": 4.8,
+      "category": "Cardiology",
+      "symptoms": ["Chest Pain", "High BP"],
+      "bio": "Expert in preventive cardiology and long-term cardiac care.",
+      "availableSlots": ["10:00", "11:30", "14:00", "16:30"],
+      "chatAvailable": true,
+      "image": "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=600&q=80"
+    },
+    {
+      "id": "d2",
+      "name": "Dr. Janice",
+      "specialty": "Dental Specialist",
+      "experience": 6,
+      "fee": 90,
+      "location": "London",
+      "rating": 4.6,
+      "category": "Dental",
+      "symptoms": ["Toothache", "Gum Bleeding"],
+      "bio": "Focused on gentle family dental care and smile restoration.",
+      "availableSlots": ["09:30", "12:00", "15:30", "18:00"],
+      "chatAvailable": true,
+      "image": "https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&w=600&q=80"
+    },
+    {
+      "id": "d3",
+      "name": "Dr. Patty",
+      "specialty": "Pediatric Specialist",
+      "experience": 10,
+      "fee": 110,
+      "location": "New York",
+      "rating": 4.9,
+      "category": "Child Care",
+      "symptoms": ["Fever", "Rash"],
+      "bio": "Treats children from newborn to teens with family-centered care.",
+      "availableSlots": ["08:30", "10:30", "13:00", "17:00"],
+      "chatAvailable": true,
+      "image": "https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&w=600&q=80"
+    },
+    {
+      "id": "d4",
+      "name": "Dr. Edward",
+      "specialty": "Skin Specialist",
+      "experience": 9,
+      "fee": 100,
+      "location": "San Francisco",
+      "rating": 4.7,
+      "category": "Skin & Hair",
+      "symptoms": ["Acne", "Hair Loss"],
+      "bio": "Dermatology specialist for chronic skin conditions and cosmetic care.",
+      "availableSlots": ["09:00", "11:00", "14:30", "17:30"],
+      "chatAvailable": false,
+      "image": "https://images.unsplash.com/photo-1612531386530-97286d97c2d2?auto=format&fit=crop&w=600&q=80"
+    },
+    {
+      "id": "d5",
+      "name": "Dr. Oliver",
+      "specialty": "Cancer Specialist",
+      "experience": 12,
+      "fee": 170,
+      "location": "Boston",
+      "rating": 4.9,
+      "category": "Cancer",
+      "symptoms": ["Unexplained Weight Loss", "Fatigue"],
+      "bio": "Medical oncologist with focus on precision medicine and continuity care.",
+      "availableSlots": ["10:15", "12:45", "15:15", "19:00"],
+      "chatAvailable": false,
+      "image": "https://images.unsplash.com/photo-1666887360742-974ddf1d7f64?auto=format&fit=crop&w=600&q=80"
+    }
+  ],
+  "favorites": {
+    "u1": ["d1", "d2"]
+  },
+  "appointments": [
+    {
+      "id": "a1",
+      "userId": "u1",
+      "doctorId": "d2",
+      "date": "2026-03-12",
+      "time": "10:00",
+      "status": "scheduled",
+      "reason": "Routine checkup"
+    }
+  ],
+  "chats": {
+    "d1": [
+      {
+        "id": "m1",
+        "sender": "doctor",
+        "text": "Hello, how can I help you today?",
+        "time": "09:30"
+      }
+    ],
+    "d2": [
+      {
+        "id": "m2",
+        "sender": "doctor",
+        "text": "Please share your symptoms.",
+        "time": "11:20"
+      }
+    ]
+  }
+}

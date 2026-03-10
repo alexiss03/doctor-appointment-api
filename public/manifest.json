@@ -1,0 +1,16 @@
+{
+  "name": "Doc Time Saver",
+  "short_name": "DocTime",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f9f1f6",
+  "theme_color": "#8f1d5d",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
