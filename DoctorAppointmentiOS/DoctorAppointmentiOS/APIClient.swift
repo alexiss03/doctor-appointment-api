@@ -1,7 +1,10 @@
 import Foundation
 
 struct APIClient {
-    var baseURL: URL = URL(string: "http://127.0.0.1:3000")!
+    // Default to deployed Render backend; override in scheme env with API_BASE_URL for local runs.
+    var baseURL: URL = URL(
+        string: ProcessInfo.processInfo.environment["API_BASE_URL"] ?? "https://doctor-appointment-api-esie.onrender.com"
+    )!
 
     private let decoder: JSONDecoder = {
         let decoder = JSONDecoder()

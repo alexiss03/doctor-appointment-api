@@ -72,6 +72,16 @@ xcodebuild -project DoctorAppointmentiOS/DoctorAppointmentiOS.xcodeproj -scheme 
 
 In Xcode, run `DoctorAppointmentiOS` on an iPhone simulator.
 
+iOS API base URL defaults to your Render deployment:
+
+`https://doctor-appointment-api-esie.onrender.com`
+
+To run iOS against local backend instead, set scheme environment variable:
+
+`API_BASE_URL=http://127.0.0.1:3000`
+
+Note: Render URL serves the web UI from this repo. Native iOS UI is separate in the Xcode project, so visual differences between web and iOS are expected.
+
 ## Notes
 
 - The app is dependency-light and uses only Node built-ins.
