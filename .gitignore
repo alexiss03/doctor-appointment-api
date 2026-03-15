@@ -14,6 +14,12 @@ xcuserdata/
 *.dSYM.zip
 *.dSYM
 
+# Android
+.gradle/
+**/build/
+local.properties
+*.iml
+
 # Local env
 .env
 .env.*

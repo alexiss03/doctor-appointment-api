@@ -21,7 +21,7 @@ This project includes a full doctor appointment booking flow with a built-in Nod
 - Smart auto-booking (best doctor + nearest open slot)
 - Doctor day schedule management with date-based available slots
 - Hospital directory with doctors and specializations
-- Native iOS app + Android support via installable PWA
+- Native iOS app + native Android app + Android support via installable PWA
 
 ## Backend APIs
 
@@ -108,6 +108,26 @@ To run iOS against local backend instead, set scheme environment variable:
 `API_BASE_URL=http://127.0.0.1:3000`
 
 Note: Render URL serves the web UI from this repo. Native iOS UI is separate in the Xcode project, so visual differences between web and iOS are expected.
+
+## Native Android (Jetpack Compose)
+
+Native Android project path:
+
+`DoctorAppointmentAndroid/`
+
+Open in Android Studio and sync Gradle.
+
+Default API URL is set in:
+
+`DoctorAppointmentAndroid/app/build.gradle.kts`
+
+as `BuildConfig.API_BASE_URL` with current value:
+
+`https://doctor-appointment-api-esie.onrender.com/`
+
+To test Android app against local backend, change it to:
+
+`http://10.0.2.2:3000/` (Android emulator localhost bridge).
 
 ## Notes
 
