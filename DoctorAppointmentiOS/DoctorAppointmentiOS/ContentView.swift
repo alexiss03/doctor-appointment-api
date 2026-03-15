@@ -74,6 +74,9 @@ struct MainTabView: View {
             SpecialistsView()
                 .tabItem { Label("Specialists", systemImage: "stethoscope") }
 
+            HospitalsView()
+                .tabItem { Label("Hospitals", systemImage: "cross.case") }
+
             FavoritesView()
                 .tabItem { Label("Favorites", systemImage: "heart") }
 
@@ -245,6 +248,75 @@ struct SpecialistsView: View {
         }
         .sheet(item: $bookingDoctor) { doctor in
             BookingView(doctor: doctor)
+        }
+    }
+}
+
+struct HospitalsView: View {
+    @EnvironmentObject private var vm: AppViewModel
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if vm.hospitals.isEmpty {
+                    ContentUnavailableView(
+                        "No Hospitals Found",
+                        systemImage: "cross.case",
+                        description: Text("Hospital list will appear here after refresh.")
+                    )
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 12) {
+                            ForEach(vm.hospitals) { hospital in
+                                VStack(alignment: .leading, spacing: 10) {
+                                    HStack(alignment: .top) {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(hospital.name)
+                                                .font(.headline)
+                                            Text("\(hospital.address), \(hospital.city), \(hospital.state)")
+                                                .foregroundStyle(.secondary)
+                                                .font(.caption)
+                                        }
+                                        Spacer()
+                                        Text("\(hospital.doctorCount) doctors")
+                                            .font(.caption.bold())
+                                            .padding(.horizontal, 10)
+                                            .padding(.vertical, 6)
+                                            .background(Color.pink.opacity(0.15))
+                                            .clipShape(Capsule())
+                                    }
+
+                                    Text("Specializations: \(hospital.specializations.joined(separator: ", "))")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+
+                                    ForEach(hospital.doctors) { doctor in
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(doctor.name)
+                                                .font(.subheadline.bold())
+                                            Text("\(doctor.specialty) • \(doctor.category)")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(8)
+                                        .background(Color(.tertiarySystemBackground))
+                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                    }
+                                }
+                                .padding(12)
+                                .background(Color(.secondarySystemBackground))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                            }
+                        }
+                        .padding()
+                    }
+                }
+            }
+            .navigationTitle("Hospitals")
+            .refreshable {
+                await vm.refreshDashboard()
+            }
         }
     }
 }
@@ -531,6 +603,11 @@ struct DoctorDetailView: View {
                         Text("⭐ \(doctor.rating, specifier: "%.1f") • \(doctor.experience) years • \(doctor.location)")
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                        if let hospitalName = doctor.hospitalName, !hospitalName.isEmpty {
+                            Text(hospitalName)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
                     }
 
                     Spacer()
@@ -684,6 +761,11 @@ struct DoctorRow: View {
                     Text("⭐ \(doctor.rating, specifier: "%.1f") • \(doctor.experience) yrs • \(doctor.location)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                    if let hospitalName = doctor.hospitalName, !hospitalName.isEmpty {
+                        Text(hospitalName)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
                 Spacer()

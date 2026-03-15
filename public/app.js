@@ -2,6 +2,7 @@ const state = {
   screen: 'login',
   user: null,
   doctors: [],
+  hospitals: [],
   categories: [],
   symptoms: [],
   favorites: new Set(),
@@ -74,7 +75,14 @@ function api(path, options = {}) {
 function setScreen(screen) {
   state.screen = screen;
   drawer.classList.remove('open');
-  if (screen === 'home' || screen === 'favorites' || screen === 'appointments' || screen === 'chat' || screen === 'specialists') {
+  if (
+    screen === 'home' ||
+    screen === 'hospitals' ||
+    screen === 'favorites' ||
+    screen === 'appointments' ||
+    screen === 'chat' ||
+    screen === 'specialists'
+  ) {
     navLinks.forEach((node) => {
       node.classList.toggle('active', node.dataset.screen === screen);
     });
@@ -119,7 +127,7 @@ function doctorCard(doctor, options = {}) {
           </div>
           <button class="icon-btn favorite-btn ${favoriteClass}" data-action="favorite" data-doctor-id="${doctor.id}" type="button">${favoriteIcon}</button>
         </div>
-        <p class="doctor-meta">⭐ ${doctor.rating} | ${doctor.experience} yrs exp | ${doctor.location} | From $${doctor.fee}</p>
+        <p class="doctor-meta">⭐ ${doctor.rating} | ${doctor.experience} yrs exp | ${doctor.location} | ${doctor.hospitalName || 'Hospital N/A'} | From $${doctor.fee}</p>
         <div class="doctor-actions">
           <button class="ghost-btn" data-action="details" data-doctor-id="${doctor.id}" type="button">${detailsLabel}</button>
           <button class="solid-btn" data-action="book-flow" data-doctor-id="${doctor.id}" type="button">${actionLabel}</button>
@@ -277,6 +285,49 @@ function renderFavorites() {
       <h2>Favorite Doctors</h2>
       <div class="doctor-stack">
         ${doctors.map((doctor) => doctorCard(doctor)).join('') || '<p class="muted">No favorites yet.</p>'}
+      </div>
+    </section>
+  `;
+}
+
+function renderHospitals() {
+  return `
+    <section class="panel">
+      <h2>Hospitals and Specialists</h2>
+      <div class="appointment-stack">
+        ${
+          state.hospitals
+            .map(
+              (hospital) => `
+          <article class="appointment-item">
+            <div class="doctor-title-row">
+              <div>
+                <h4>${hospital.name}</h4>
+                <p class="muted">${hospital.address}, ${hospital.city}, ${hospital.state}</p>
+              </div>
+              <span class="badge">${hospital.doctorCount} doctors</span>
+            </div>
+            <p class="muted">Specializations: ${hospital.specializations.length ? hospital.specializations.join(', ') : 'None listed'}</p>
+            <div class="doctor-stack">
+              ${(hospital.doctors || [])
+                .map(
+                  (doctor) => `
+                <article class="doctor-card">
+                  <div class="doctor-content">
+                    <h4 class="doctor-name">${doctor.name}</h4>
+                    <p class="doctor-sub">${doctor.specialty}</p>
+                    <p class="doctor-meta">Category: ${doctor.category} | ⭐ ${doctor.rating} | ${doctor.experience} yrs</p>
+                  </div>
+                </article>
+              `
+                )
+                .join('')}
+            </div>
+          </article>
+        `
+            )
+            .join('') || '<p class="muted">No hospitals found.</p>'
+        }
       </div>
     </section>
   `;
@@ -494,6 +545,11 @@ function render() {
     return;
   }
 
+  if (state.screen === 'hospitals') {
+    view.innerHTML = renderHospitals();
+    return;
+  }
+
   if (state.screen === 'appointments') {
     view.innerHTML = renderAppointments();
     return;
@@ -525,6 +581,11 @@ function render() {
 async function loadDoctors() {
   const payload = await api('/api/doctors');
   state.doctors = payload.doctors || [];
+}
+
+async function loadHospitals() {
+  const payload = await api('/api/hospitals');
+  state.hospitals = payload.hospitals || [];
 }
 
 async function loadCategoriesAndSymptoms() {
@@ -568,7 +629,7 @@ async function loadDoctorSchedule(doctorId, date) {
 }
 
 async function hydrateDashboard() {
-  await Promise.all([loadDoctors(), loadCategoriesAndSymptoms(), loadFavorites(), loadAppointments(), loadChats()]);
+  await Promise.all([loadDoctors(), loadHospitals(), loadCategoriesAndSymptoms(), loadFavorites(), loadAppointments(), loadChats()]);
   if (!state.smartDate) {
     state.smartDate = todayIso();
   }

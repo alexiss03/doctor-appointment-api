@@ -28,6 +28,11 @@ struct APIClient {
         return response.doctors
     }
 
+    func hospitals() async throws -> [Hospital] {
+        let response: HospitalsResponse = try await request(path: "/api/hospitals")
+        return response.hospitals
+    }
+
     func categories() async throws -> [String] {
         let response: CategoriesResponse = try await request(path: "/api/categories")
         return response.categories

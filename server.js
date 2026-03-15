@@ -82,10 +82,35 @@ function findDoctor(store, doctorId) {
   return store.doctors.find((doctor) => doctor.id === doctorId);
 }
 
+function findHospital(store, hospitalId) {
+  return (store.hospitals || []).find((hospital) => hospital.id === hospitalId);
+}
+
+function enrichDoctor(store, doctor) {
+  if (!doctor) {
+    return null;
+  }
+
+  const hospital = findHospital(store, doctor.hospitalId);
+  return {
+    ...doctor,
+    hospitalName: hospital ? hospital.name : null,
+    hospital: hospital
+      ? {
+          id: hospital.id,
+          name: hospital.name,
+          city: hospital.city,
+          state: hospital.state,
+          address: hospital.address
+        }
+      : null
+  };
+}
+
 function attachDoctorData(appointment, store) {
   return {
     ...appointment,
-    doctor: findDoctor(store, appointment.doctorId) || null
+    doctor: enrichDoctor(store, findDoctor(store, appointment.doctorId))
   };
 }
 
@@ -98,7 +123,7 @@ function buildChatList(store, userId) {
     .map((doctor) => {
       const messages = store.chats[doctor.id] || [];
       return {
-        doctor,
+        doctor: enrichDoctor(store, doctor),
         favorite: favoriteSet.has(doctor.id),
         lastMessage: messages.length ? messages[messages.length - 1] : null,
         messageCount: messages.length
@@ -243,6 +268,34 @@ async function handleApi(req, res, url) {
     return sendJson(res, 200, { symptoms });
   }
 
+  if (req.method === 'GET' && url.pathname === '/api/hospitals') {
+    const city = String(url.searchParams.get('city') || '').trim().toLowerCase();
+
+    const hospitals = (store.hospitals || [])
+      .filter((hospital) => !city || hospital.city.toLowerCase().includes(city))
+      .map((hospital) => {
+        const doctors = store.doctors
+          .filter((doctor) => doctor.hospitalId === hospital.id)
+          .map((doctor) => ({
+            id: doctor.id,
+            name: doctor.name,
+            specialty: doctor.specialty,
+            category: doctor.category,
+            experience: doctor.experience,
+            rating: doctor.rating
+          }));
+
+        return {
+          ...hospital,
+          doctorCount: doctors.length,
+          specializations: [...new Set(doctors.map((doctor) => doctor.specialty))],
+          doctors
+        };
+      });
+
+    return sendJson(res, 200, { hospitals });
+  }
+
   if (req.method === 'GET' && url.pathname === '/api/doctors') {
     const search = (url.searchParams.get('search') || '').toLowerCase();
     const category = (url.searchParams.get('category') || '').toLowerCase();
@@ -264,7 +317,7 @@ async function handleApi(req, res, url) {
         return matchesSearch && matchesCategory && matchesLocation;
       })
       .map((doctor) => ({
-        ...doctor,
+        ...enrichDoctor(store, doctor),
         favorite: favorites.has(doctor.id)
       }));
 
@@ -450,12 +503,12 @@ async function handleApi(req, res, url) {
     }
 
     const favorite = (store.favorites[user.id] || []).includes(doctor.id);
-    return sendJson(res, 200, { doctor: { ...doctor, favorite } });
+    return sendJson(res, 200, { doctor: { ...enrichDoctor(store, doctor), favorite } });
   }
 
   if (req.method === 'GET' && url.pathname === '/api/favorites') {
     const ids = store.favorites[user.id] || [];
-    const doctors = ids.map((id) => findDoctor(store, id)).filter(Boolean);
+    const doctors = ids.map((id) => enrichDoctor(store, findDoctor(store, id))).filter(Boolean);
     return sendJson(res, 200, { doctors });
   }
 
@@ -602,7 +655,7 @@ async function handleApi(req, res, url) {
     }
 
     return sendJson(res, 200, {
-      doctor: findDoctor(store, doctorId),
+      doctor: enrichDoctor(store, findDoctor(store, doctorId)),
       messages: store.chats[doctorId] || []
     });
   }

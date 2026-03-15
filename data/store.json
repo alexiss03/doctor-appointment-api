@@ -8,9 +8,47 @@
     }
   ],
   "currentUserId": "u1",
+  "hospitals": [
+    {
+      "id": "h1",
+      "name": "City Heart and Multi-Specialty Center",
+      "city": "Chandigarh",
+      "state": "Punjab",
+      "address": "12 Sector Road, Chandigarh"
+    },
+    {
+      "id": "h2",
+      "name": "London Central Medical Hospital",
+      "city": "London",
+      "state": "England",
+      "address": "221 Baker Street, London"
+    },
+    {
+      "id": "h3",
+      "name": "New York Children and Family Hospital",
+      "city": "New York",
+      "state": "NY",
+      "address": "77 East River Ave, New York"
+    },
+    {
+      "id": "h4",
+      "name": "Bay Area Skin and Wellness Hospital",
+      "city": "San Francisco",
+      "state": "CA",
+      "address": "90 Market Street, San Francisco"
+    },
+    {
+      "id": "h5",
+      "name": "Boston Oncology and Specialty Hospital",
+      "city": "Boston",
+      "state": "MA",
+      "address": "15 Commonwealth Dr, Boston"
+    }
+  ],
   "doctors": [
     {
       "id": "d1",
+      "hospitalId": "h1",
       "name": "Dr. Marcus Turner",
       "specialty": "Heart Specialist",
       "experience": 8,
@@ -26,6 +64,7 @@
     },
     {
       "id": "d2",
+      "hospitalId": "h2",
       "name": "Dr. Janice",
       "specialty": "Dental Specialist",
       "experience": 6,
@@ -41,6 +80,7 @@
     },
     {
       "id": "d3",
+      "hospitalId": "h3",
       "name": "Dr. Patty",
       "specialty": "Pediatric Specialist",
       "experience": 10,
@@ -56,6 +96,7 @@
     },
     {
       "id": "d4",
+      "hospitalId": "h4",
       "name": "Dr. Edward",
       "specialty": "Skin Specialist",
       "experience": 9,
@@ -71,6 +112,7 @@
     },
     {
       "id": "d5",
+      "hospitalId": "h5",
       "name": "Dr. Oliver",
       "specialty": "Cancer Specialist",
       "experience": 12,

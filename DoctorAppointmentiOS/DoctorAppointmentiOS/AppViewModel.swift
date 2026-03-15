@@ -4,6 +4,7 @@ import Foundation
 final class AppViewModel: ObservableObject {
     @Published var user: User?
     @Published var doctors: [Doctor] = []
+    @Published var hospitals: [Hospital] = []
     @Published var categories: [String] = []
     @Published var symptoms: [String] = []
     @Published var favoriteDoctorIds: Set<String> = []
@@ -52,6 +53,7 @@ final class AppViewModel: ObservableObject {
 
     func refreshAll() async throws {
         async let doctorsTask = api.doctors()
+        async let hospitalsTask = api.hospitals()
         async let categoriesTask = api.categories()
         async let symptomsTask = api.symptoms()
         async let favoritesTask = api.favorites()
@@ -59,6 +61,7 @@ final class AppViewModel: ObservableObject {
         async let chatsTask = api.chats()
 
         doctors = try await doctorsTask
+        hospitals = try await hospitalsTask
         categories = try await categoriesTask
         symptoms = try await symptomsTask
         appointments = try await appointmentsTask

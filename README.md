@@ -20,6 +20,8 @@ This project includes a full doctor appointment booking flow with a built-in Nod
 - Smart appointment recommendations by symptom/date/time
 - Smart auto-booking (best doctor + nearest open slot)
 - Doctor day schedule management with date-based available slots
+- Hospital directory with doctors and specializations
+- Native iOS app + Android support via installable PWA
 
 ## Backend APIs
 
@@ -27,6 +29,7 @@ This project includes a full doctor appointment booking flow with a built-in Nod
 - `GET /api/me`
 - `GET /api/categories`
 - `GET /api/symptoms`
+- `GET /api/hospitals`
 - `GET /api/doctors`
 - `GET /api/doctors/:id`
 - `GET /api/doctors/:id/schedule?date=YYYY-MM-DD`

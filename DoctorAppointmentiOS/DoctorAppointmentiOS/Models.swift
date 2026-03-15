@@ -8,6 +8,8 @@ struct User: Codable, Identifiable {
 
 struct Doctor: Codable, Identifiable, Hashable {
     let id: String
+    let hospitalId: String?
+    let hospitalName: String?
     let name: String
     let specialty: String
     let experience: Int
@@ -21,6 +23,26 @@ struct Doctor: Codable, Identifiable, Hashable {
     let chatAvailable: Bool
     let image: String
     var favorite: Bool?
+}
+
+struct HospitalDoctorSummary: Codable, Identifiable {
+    let id: String
+    let name: String
+    let specialty: String
+    let category: String
+    let experience: Int
+    let rating: Double
+}
+
+struct Hospital: Codable, Identifiable {
+    let id: String
+    let name: String
+    let city: String
+    let state: String
+    let address: String
+    let doctorCount: Int
+    let specializations: [String]
+    let doctors: [HospitalDoctorSummary]
 }
 
 struct Appointment: Codable, Identifiable {
@@ -59,6 +81,10 @@ struct UserResponse: Codable {
 
 struct DoctorsResponse: Codable {
     let doctors: [Doctor]
+}
+
+struct HospitalsResponse: Codable {
+    let hospitals: [Hospital]
 }
 
 struct CategoriesResponse: Codable {
