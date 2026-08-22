@@ -1,4 +1,4 @@
-const CACHE_NAME = 'doc-time-saver-v4';
+const CACHE_NAME = 'doc-time-saver-v5';
 const APP_SHELL = ['/', '/index.html', '/styles.css', '/app.js', '/config.js', '/manifest.json', '/icons/icon.svg'];
 
 self.addEventListener('install', (event) => {

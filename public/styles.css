@@ -142,7 +142,7 @@ h1 {
 
 .bottom-nav {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 8px;
   padding: 12px;
   border-top: 1px solid var(--line);
@@ -346,6 +346,31 @@ textarea {
 .badge.cancelled {
   background: #ffe5ec;
   color: var(--danger);
+}
+
+.badge.not_checked_in {
+  background: #eef0f4;
+  color: #596070;
+}
+
+.badge.checked_in {
+  background: #eaf2ff;
+  color: #285b9f;
+}
+
+.badge.waiting {
+  background: #fff2d7;
+  color: #946000;
+}
+
+.badge.in_consultation {
+  background: #fce6f2;
+  color: var(--accent);
+}
+
+.badge.attended {
+  background: #dff6eb;
+  color: var(--ok);
 }
 
 .appointment-item,

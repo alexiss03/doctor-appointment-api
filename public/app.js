@@ -7,6 +7,8 @@ const state = {
   symptoms: [],
   favorites: new Set(),
   appointments: [],
+  liveDate: '',
+  liveQueue: null,
   chats: [],
   activeChatDoctorId: null,
   activeChatMessages: [],
@@ -78,6 +80,7 @@ function setScreen(screen) {
   if (
     screen === 'home' ||
     screen === 'hospitals' ||
+    screen === 'live' ||
     screen === 'favorites' ||
     screen === 'appointments' ||
     screen === 'chat' ||
@@ -333,6 +336,67 @@ function renderHospitals() {
   `;
 }
 
+function attendanceLabel(value) {
+  return String(value || 'not_checked_in').replaceAll('_', ' ');
+}
+
+function renderLiveQueue() {
+  const queue = state.liveQueue;
+  const date = state.liveDate || todayIso();
+  const counts = queue?.counts || { checkedIn: 0, waiting: 0, inConsultation: 0, attended: 0 };
+  const appointments = queue?.appointments || [];
+
+  return `
+    <section class="panel">
+      <div class="doctor-title-row">
+        <div>
+          <h2>Live Patient Queue</h2>
+          <p class="muted">Patients currently checked in, waiting, in consultation, or attended.</p>
+        </div>
+      </div>
+      <div class="search-row">
+        <input id="liveDate" type="date" value="${date}" />
+        <button class="solid-btn" data-action="load-live-queue" type="button">Refresh</button>
+      </div>
+      <div class="chips" style="margin-top:12px;">
+        <span class="badge checked_in">Checked in: ${counts.checkedIn}</span>
+        <span class="badge waiting">Waiting: ${counts.waiting}</span>
+        <span class="badge in_consultation">In consultation: ${counts.inConsultation}</span>
+        <span class="badge attended">Attended: ${counts.attended}</span>
+      </div>
+      <div class="appointment-stack" style="margin-top:14px;">
+        ${
+          appointments
+            .map((appointment) => {
+              const doctor = appointment.doctor || {};
+              const patient = appointment.patient || {};
+              const status = appointment.attendanceStatus || 'not_checked_in';
+              return `
+                <article class="appointment-item">
+                  <div class="doctor-title-row">
+                    <div>
+                      <h4>${patient.name || 'Patient'}</h4>
+                      <p class="muted">${appointment.time} • ${doctor.name || 'Doctor'} • ${doctor.specialty || ''}</p>
+                    </div>
+                    <span class="badge ${status}">${attendanceLabel(status)}</span>
+                  </div>
+                  <p class="muted">${appointment.reason || 'Consultation'} • ${doctor.hospitalName || 'Hospital N/A'}</p>
+                  <div class="row-actions">
+                    <button class="ghost-btn" data-action="queue-status" data-id="${appointment.id}" data-value="checked_in" type="button">Check In</button>
+                    <button class="ghost-btn" data-action="queue-status" data-id="${appointment.id}" data-value="waiting" type="button">Waiting</button>
+                    <button class="solid-btn" data-action="queue-status" data-id="${appointment.id}" data-value="in_consultation" type="button">Start Visit</button>
+                    <button class="ghost-btn" data-action="queue-status" data-id="${appointment.id}" data-value="attended" type="button">Attended</button>
+                  </div>
+                </article>
+              `;
+            })
+            .join('') || '<p class="muted">No patient activity for this date.</p>'
+        }
+      </div>
+    </section>
+  `;
+}
+
 function renderAppointments() {
   const appointments = state.appointments.filter((appointment) => appointment.status === state.activeAppointmentTab);
 
@@ -550,6 +614,11 @@ function render() {
     return;
   }
 
+  if (state.screen === 'live') {
+    view.innerHTML = renderLiveQueue();
+    return;
+  }
+
   if (state.screen === 'appointments') {
     view.innerHTML = renderAppointments();
     return;
@@ -604,6 +673,12 @@ async function loadAppointments() {
   state.appointments = payload.appointments || [];
 }
 
+async function loadLiveQueue(date = state.liveDate || todayIso()) {
+  const payload = await api(`/api/live-queue?date=${encodeURIComponent(date)}`);
+  state.liveDate = payload.date || date;
+  state.liveQueue = payload;
+}
+
 async function loadChats() {
   const payload = await api('/api/chats');
   state.chats = payload.chats || [];
@@ -629,7 +704,15 @@ async function loadDoctorSchedule(doctorId, date) {
 }
 
 async function hydrateDashboard() {
-  await Promise.all([loadDoctors(), loadHospitals(), loadCategoriesAndSymptoms(), loadFavorites(), loadAppointments(), loadChats()]);
+  await Promise.all([
+    loadDoctors(),
+    loadHospitals(),
+    loadCategoriesAndSymptoms(),
+    loadFavorites(),
+    loadAppointments(),
+    loadLiveQueue(),
+    loadChats()
+  ]);
   if (!state.smartDate) {
     state.smartDate = todayIso();
   }
@@ -832,6 +915,9 @@ function attachGlobalListeners() {
           await loadChatMessages(state.activeChatDoctorId);
         }
       }
+      if (screen === 'live') {
+        await loadLiveQueue();
+      }
       setScreen(screen);
     });
   });
@@ -847,6 +933,9 @@ function attachGlobalListeners() {
         if (state.activeChatDoctorId) {
           await loadChatMessages(state.activeChatDoctorId);
         }
+      }
+      if (screen === 'live') {
+        await loadLiveQueue();
       }
       setScreen(screen);
     });
@@ -954,6 +1043,31 @@ function attachGlobalListeners() {
 
     if (action === 'go-appointments') {
       setScreen('appointments');
+      return;
+    }
+
+    if (action === 'load-live-queue') {
+      const date = String(document.getElementById('liveDate')?.value || todayIso());
+      try {
+        await loadLiveQueue(date);
+        render();
+      } catch (err) {
+        showToast(err.message);
+      }
+      return;
+    }
+
+    if (action === 'queue-status' && id && value) {
+      try {
+        await api(`/api/live-queue/${id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ attendanceStatus: value })
+        });
+        await Promise.all([loadAppointments(), loadLiveQueue(state.liveDate || todayIso())]);
+        render();
+      } catch (err) {
+        showToast(err.message);
+      }
       return;
     }
 

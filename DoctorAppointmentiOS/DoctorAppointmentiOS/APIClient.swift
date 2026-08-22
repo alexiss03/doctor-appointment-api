@@ -82,6 +82,16 @@ struct APIClient {
         let _: AppointmentResponse = try await request(path: "/api/appointments/\(id)", method: "PATCH", body: body)
     }
 
+    func liveQueue(date: String) async throws -> LiveQueueResponse {
+        try await request(path: "/api/live-queue?date=\(date)")
+    }
+
+    func updateAttendance(id: String, attendanceStatus: String) async throws -> LiveQueueResponse {
+        let body = ["attendanceStatus": attendanceStatus]
+        let response: LiveQueueUpdateResponse = try await request(path: "/api/live-queue/\(id)", method: "PATCH", body: body)
+        return response.queue
+    }
+
     func chats() async throws -> [ChatSummary] {
         let response: ChatsResponse = try await request(path: "/api/chats")
         return response.chats
@@ -137,6 +147,11 @@ struct EmptyResponse: Codable {}
 
 struct APIErrorResponse: Codable {
     let error: String
+}
+
+struct LiveQueueUpdateResponse: Codable {
+    let appointment: Appointment
+    let queue: LiveQueueResponse
 }
 
 enum APIError: LocalizedError {

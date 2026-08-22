@@ -39,6 +39,52 @@ data class Hospital(
     val doctors: List<HospitalDoctorSummary>
 )
 
+data class Patient(
+    val id: String,
+    val name: String,
+    val email: String
+)
+
+data class Appointment(
+    val id: String,
+    val userId: String,
+    val doctorId: String,
+    val date: String,
+    val time: String,
+    val status: String,
+    val attendanceStatus: String? = null,
+    val reason: String,
+    val doctor: Doctor? = null,
+    val patient: Patient? = null
+)
+
+data class LiveQueueCounts(
+    val checkedIn: Int,
+    val waiting: Int,
+    val inConsultation: Int,
+    val attended: Int
+)
+
+data class DoctorQueue(
+    val doctor: Doctor,
+    val counts: LiveQueueCounts,
+    val appointments: List<Appointment>
+)
+
+data class LiveQueueResponse(
+    val date: String,
+    val counts: LiveQueueCounts,
+    val appointments: List<Appointment>,
+    val doctors: List<DoctorQueue>
+)
+
+data class AttendanceUpdateRequest(val attendanceStatus: String)
+
+data class LiveQueueUpdateResponse(
+    val appointment: Appointment,
+    val queue: LiveQueueResponse
+)
+
 data class DoctorsResponse(val doctors: List<Doctor>)
 
 data class HospitalsResponse(val hospitals: List<Hospital>)

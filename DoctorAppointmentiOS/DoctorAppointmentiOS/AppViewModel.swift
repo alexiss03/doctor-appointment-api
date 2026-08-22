@@ -9,6 +9,7 @@ final class AppViewModel: ObservableObject {
     @Published var symptoms: [String] = []
     @Published var favoriteDoctorIds: Set<String> = []
     @Published var appointments: [Appointment] = []
+    @Published var liveQueue: LiveQueueResponse?
     @Published var chats: [ChatSummary] = []
     @Published var selectedChatDoctorId: String?
     @Published var messages: [ChatMessage] = []
@@ -58,6 +59,7 @@ final class AppViewModel: ObservableObject {
         async let symptomsTask = api.symptoms()
         async let favoritesTask = api.favorites()
         async let appointmentsTask = api.appointments()
+        async let liveQueueTask = api.liveQueue(date: Self.todayString())
         async let chatsTask = api.chats()
 
         doctors = try await doctorsTask
@@ -65,6 +67,7 @@ final class AppViewModel: ObservableObject {
         categories = try await categoriesTask
         symptoms = try await symptomsTask
         appointments = try await appointmentsTask
+        liveQueue = try await liveQueueTask
         chats = try await chatsTask
 
         let favorites = try await favoritesTask
@@ -132,6 +135,24 @@ final class AppViewModel: ObservableObject {
         do {
             try await api.updateAppointment(id: appointment.id, status: status, date: date, time: time)
             appointments = try await api.appointments()
+            liveQueue = try await api.liveQueue(date: appointment.date)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func loadLiveQueue(date: String? = nil) async {
+        do {
+            liveQueue = try await api.liveQueue(date: date ?? Self.todayString())
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func updateAttendance(_ appointment: Appointment, attendanceStatus: String) async {
+        do {
+            liveQueue = try await api.updateAttendance(id: appointment.id, attendanceStatus: attendanceStatus)
+            appointments = try await api.appointments()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -169,5 +190,11 @@ final class AppViewModel: ObservableObject {
 
     func clearError() {
         errorMessage = nil
+    }
+
+    nonisolated static func todayString() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: Date())
     }
 }

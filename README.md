@@ -22,6 +22,7 @@ This project includes a full doctor appointment booking flow with a built-in Nod
 - Doctor day schedule management with date-based available slots
 - Hospital directory with doctors and specializations
 - Native iOS app + native Android app + Android support via installable PWA
+- Live patient attendance queue for checked-in, waiting, in-consultation, and attended visits
 
 ## Backend APIs
 
@@ -40,6 +41,8 @@ This project includes a full doctor appointment booking flow with a built-in Nod
 - `POST /api/appointments`
 - `POST /api/appointments/smart-book`
 - `PATCH /api/appointments/:id`
+- `GET /api/live-queue?date=YYYY-MM-DD`
+- `PATCH /api/live-queue/:appointmentId`
 - `GET /api/smart-appointments/recommendations`
 - `GET /api/chats`
 - `GET /api/chats/:doctorId/messages`

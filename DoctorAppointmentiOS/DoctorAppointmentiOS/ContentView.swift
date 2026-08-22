@@ -77,6 +77,9 @@ struct MainTabView: View {
             HospitalsView()
                 .tabItem { Label("Hospitals", systemImage: "cross.case") }
 
+            LiveQueueView()
+                .tabItem { Label("Live", systemImage: "person.3.sequence") }
+
             FavoritesView()
                 .tabItem { Label("Favorites", systemImage: "heart") }
 
@@ -318,6 +321,98 @@ struct HospitalsView: View {
                 await vm.refreshDashboard()
             }
         }
+    }
+}
+
+struct LiveQueueView: View {
+    @EnvironmentObject private var vm: AppViewModel
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if let queue = vm.liveQueue {
+                    List {
+                        Section {
+                            HStack {
+                                QueueCount(label: "Checked in", value: queue.counts.checkedIn)
+                                QueueCount(label: "Waiting", value: queue.counts.waiting)
+                            }
+                            HStack {
+                                QueueCount(label: "In visit", value: queue.counts.inConsultation)
+                                QueueCount(label: "Attended", value: queue.counts.attended)
+                            }
+                        }
+
+                        Section("Patients") {
+                            ForEach(queue.appointments) { appointment in
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text(appointment.patient?.name ?? "Patient")
+                                        .font(.headline)
+                                    Text("\(appointment.time) • \(appointment.doctor?.name ?? "Doctor")")
+                                        .foregroundStyle(.secondary)
+                                    Text(attendanceLabel(appointment.attendanceStatus))
+                                        .font(.caption.bold())
+                                        .foregroundStyle(.pink)
+
+                                    HStack {
+                                        Button("Check In") {
+                                            Task { await vm.updateAttendance(appointment, attendanceStatus: "checked_in") }
+                                        }
+                                        .buttonStyle(.bordered)
+
+                                        Button("Start") {
+                                            Task { await vm.updateAttendance(appointment, attendanceStatus: "in_consultation") }
+                                        }
+                                        .buttonStyle(.borderedProminent)
+                                        .tint(.pink)
+
+                                        Button("Attended") {
+                                            Task { await vm.updateAttendance(appointment, attendanceStatus: "attended") }
+                                        }
+                                        .buttonStyle(.bordered)
+                                    }
+                                }
+                                .padding(.vertical, 4)
+                            }
+                        }
+                    }
+                    .listStyle(.insetGrouped)
+                } else {
+                    ContentUnavailableView(
+                        "No Live Queue",
+                        systemImage: "person.3.sequence",
+                        description: Text("Pull to refresh patient activity.")
+                    )
+                }
+            }
+            .navigationTitle("Live Queue")
+            .refreshable {
+                await vm.loadLiveQueue()
+            }
+            .task {
+                await vm.loadLiveQueue()
+            }
+        }
+    }
+
+    private func attendanceLabel(_ value: String?) -> String {
+        (value ?? "not_checked_in").replacingOccurrences(of: "_", with: " ")
+    }
+}
+
+struct QueueCount: View {
+    let label: String
+    let value: Int
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("\(value)")
+                .font(.title2.bold())
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

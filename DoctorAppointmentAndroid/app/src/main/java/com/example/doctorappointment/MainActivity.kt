@@ -37,8 +37,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.doctorappointment.model.Appointment
 import com.example.doctorappointment.model.Doctor
 import com.example.doctorappointment.model.Hospital
+import com.example.doctorappointment.model.LiveQueueResponse
 import com.example.doctorappointment.ui.AppViewModel
 
 class MainActivity : ComponentActivity() {
@@ -59,7 +61,7 @@ class MainActivity : ComponentActivity() {
 private fun DoctorAppointmentApp(vm: AppViewModel = viewModel()) {
     val state = vm.uiState.value
     var tabIndex by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Doctors", "Hospitals")
+    val tabs = listOf("Doctors", "Hospitals", "Live")
 
     Scaffold(
         topBar = {
@@ -86,7 +88,8 @@ private fun DoctorAppointmentApp(vm: AppViewModel = viewModel()) {
                 state.loading -> LoadingView()
                 state.error != null -> ErrorView(state.error)
                 tabIndex == 0 -> DoctorsView(state.doctors)
-                else -> HospitalsView(state.hospitals)
+                tabIndex == 1 -> HospitalsView(state.hospitals)
+                else -> LiveQueueView(state.liveQueue, vm::updateAttendance)
             }
         }
     }
@@ -158,6 +161,74 @@ private fun HospitalsView(hospitals: List<Hospital>) {
                         Text("(${doctor.specialty})")
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LiveQueueView(
+    queue: LiveQueueResponse?,
+    onStatusChange: (String, String) -> Unit
+) {
+    if (queue == null) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("No live queue loaded")
+        }
+        return
+    }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        item {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.medium)
+                    .padding(12.dp)
+            ) {
+                Text("Live Queue for ${queue.date}", fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(6.dp))
+                Text("Checked in: ${queue.counts.checkedIn}")
+                Text("Waiting: ${queue.counts.waiting}")
+                Text("In consultation: ${queue.counts.inConsultation}")
+                Text("Attended: ${queue.counts.attended}")
+            }
+        }
+
+        items(queue.appointments) { appointment ->
+            LiveAppointmentCard(appointment, onStatusChange)
+        }
+    }
+}
+
+@Composable
+private fun LiveAppointmentCard(
+    appointment: Appointment,
+    onStatusChange: (String, String) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.medium)
+            .padding(12.dp)
+    ) {
+        Text(appointment.patient?.name ?: "Patient", fontWeight = FontWeight.Bold)
+        Text("${appointment.time} • ${appointment.doctor?.name ?: "Doctor"}")
+        Text("Status: ${(appointment.attendanceStatus ?: "not_checked_in").replace("_", " ")}")
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextButton(onClick = { onStatusChange(appointment.id, "checked_in") }) {
+                Text("Check In")
+            }
+            TextButton(onClick = { onStatusChange(appointment.id, "in_consultation") }) {
+                Text("Start")
+            }
+            TextButton(onClick = { onStatusChange(appointment.id, "attended") }) {
+                Text("Attended")
             }
         }
     }

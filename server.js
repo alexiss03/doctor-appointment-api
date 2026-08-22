@@ -110,7 +110,67 @@ function enrichDoctor(store, doctor) {
 function attachDoctorData(appointment, store) {
   return {
     ...appointment,
+    patient: getPatientForAppointment(store, appointment),
     doctor: enrichDoctor(store, findDoctor(store, appointment.doctorId))
+  };
+}
+
+function getPatientForAppointment(store, appointment) {
+  const patient = store.users.find((entry) => entry.id === appointment.userId);
+  return patient
+    ? {
+        id: patient.id,
+        name: patient.name,
+        email: patient.email
+      }
+    : null;
+}
+
+function normalizeAttendanceStatus(value, fallback = 'waiting') {
+  const allowed = ['not_checked_in', 'checked_in', 'waiting', 'in_consultation', 'attended'];
+  return allowed.includes(value) ? value : fallback;
+}
+
+function buildLiveQueue(store, date = toIsoDateString()) {
+  const queueItems = store.appointments
+    .filter((appointment) => appointment.date === date && appointment.status !== 'cancelled')
+    .map((appointment) => ({
+      ...attachDoctorData(
+        {
+          ...appointment,
+          attendanceStatus: normalizeAttendanceStatus(
+            appointment.attendanceStatus,
+            appointment.status === 'completed' ? 'attended' : 'waiting'
+          )
+        },
+        store
+      )
+    }));
+
+  const doctors = store.doctors.map((doctor) => {
+    const doctorAppointments = queueItems.filter((appointment) => appointment.doctorId === doctor.id);
+    return {
+      doctor: enrichDoctor(store, doctor),
+      counts: {
+        checkedIn: doctorAppointments.filter((appointment) => appointment.attendanceStatus === 'checked_in').length,
+        waiting: doctorAppointments.filter((appointment) => appointment.attendanceStatus === 'waiting').length,
+        inConsultation: doctorAppointments.filter((appointment) => appointment.attendanceStatus === 'in_consultation').length,
+        attended: doctorAppointments.filter((appointment) => appointment.attendanceStatus === 'attended').length
+      },
+      appointments: doctorAppointments.sort((left, right) => parseTimeToMinutes(left.time) - parseTimeToMinutes(right.time))
+    };
+  });
+
+  return {
+    date,
+    counts: {
+      checkedIn: queueItems.filter((appointment) => appointment.attendanceStatus === 'checked_in').length,
+      waiting: queueItems.filter((appointment) => appointment.attendanceStatus === 'waiting').length,
+      inConsultation: queueItems.filter((appointment) => appointment.attendanceStatus === 'in_consultation').length,
+      attended: queueItems.filter((appointment) => appointment.attendanceStatus === 'attended').length
+    },
+    appointments: queueItems.sort((left, right) => parseTimeToMinutes(left.time) - parseTimeToMinutes(right.time)),
+    doctors
   };
 }
 
@@ -477,6 +537,7 @@ async function handleApi(req, res, url) {
       date,
       time: selectedSlot,
       status: 'scheduled',
+      attendanceStatus: 'not_checked_in',
       reason
     };
 
@@ -535,6 +596,49 @@ async function handleApi(req, res, url) {
     });
   }
 
+  if (req.method === 'GET' && url.pathname === '/api/live-queue') {
+    const date = String(url.searchParams.get('date') || toIsoDateString()).trim();
+    return sendJson(res, 200, buildLiveQueue(store, date));
+  }
+
+  if (req.method === 'PATCH' && url.pathname.startsWith('/api/live-queue/')) {
+    const appointmentId = url.pathname.split('/')[3];
+    const body = await parseJsonBody(req);
+    if (!body || !body.attendanceStatus) {
+      return sendJson(res, 400, { error: 'attendanceStatus is required.' });
+    }
+
+    const nextAttendanceStatus = normalizeAttendanceStatus(body.attendanceStatus, null);
+    if (!nextAttendanceStatus) {
+      return sendJson(res, 400, {
+        error: 'attendanceStatus must be not_checked_in, checked_in, waiting, in_consultation, or attended.'
+      });
+    }
+
+    const appointment = store.appointments.find((entry) => entry.id === appointmentId);
+    if (!appointment) {
+      return sendJson(res, 404, { error: 'Appointment not found.' });
+    }
+
+    if (appointment.status === 'cancelled') {
+      return sendJson(res, 409, { error: 'Cancelled appointments cannot enter the live queue.' });
+    }
+
+    appointment.attendanceStatus = nextAttendanceStatus;
+    if (nextAttendanceStatus === 'attended') {
+      appointment.status = 'completed';
+    }
+    if (nextAttendanceStatus !== 'attended' && appointment.status === 'completed') {
+      appointment.status = 'scheduled';
+    }
+
+    await writeStore(store);
+    return sendJson(res, 200, {
+      appointment: attachDoctorData(appointment, store),
+      queue: buildLiveQueue(store, appointment.date)
+    });
+  }
+
   if (req.method === 'GET' && url.pathname === '/api/appointments') {
     const status = (url.searchParams.get('status') || '').toLowerCase();
     const appointments = store.appointments
@@ -576,6 +680,7 @@ async function handleApi(req, res, url) {
       date: body.date,
       time: body.time,
       status: 'scheduled',
+      attendanceStatus: 'not_checked_in',
       reason: body.reason || 'General consultation'
     };
 
@@ -637,6 +742,13 @@ async function handleApi(req, res, url) {
 
     if (body.reason) {
       appointment.reason = body.reason;
+    }
+
+    if (body.attendanceStatus) {
+      appointment.attendanceStatus = normalizeAttendanceStatus(body.attendanceStatus, appointment.attendanceStatus);
+      if (appointment.attendanceStatus === 'attended') {
+        appointment.status = 'completed';
+      }
     }
 
     await writeStore(store);

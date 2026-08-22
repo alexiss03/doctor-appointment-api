@@ -52,8 +52,16 @@ struct Appointment: Codable, Identifiable {
     var date: String
     var time: String
     var status: String
+    var attendanceStatus: String?
     var reason: String
     var doctor: Doctor?
+    var patient: Patient?
+}
+
+struct Patient: Codable, Identifiable {
+    let id: String
+    let name: String
+    let email: String
 }
 
 struct ChatSummary: Codable {
@@ -101,6 +109,27 @@ struct AppointmentsResponse: Codable {
 
 struct AppointmentResponse: Codable {
     let appointment: Appointment
+}
+
+struct LiveQueueCounts: Codable {
+    let checkedIn: Int
+    let waiting: Int
+    let inConsultation: Int
+    let attended: Int
+}
+
+struct DoctorQueue: Codable, Identifiable {
+    var id: String { doctor.id }
+    let doctor: Doctor
+    let counts: LiveQueueCounts
+    let appointments: [Appointment]
+}
+
+struct LiveQueueResponse: Codable {
+    let date: String
+    let counts: LiveQueueCounts
+    let appointments: [Appointment]
+    let doctors: [DoctorQueue]
 }
 
 struct ChatsResponse: Codable {
