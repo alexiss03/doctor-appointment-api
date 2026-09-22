@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#8f1d5d" />
+    <meta name="theme-color" content="#061b3d" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <title>Doctor Appointment Booking</title>
+    <title>MedX Appointment Dashboard</title>
     <link rel="manifest" href="/manifest.json" />
     <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/icons/icon.svg" />
@@ -16,7 +16,7 @@
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/styles-v6.css" />
   </head>
   <body>
     <div class="background-orb orb-a"></div>
@@ -27,15 +27,15 @@
       <header class="top-header">
         <button id="menuToggle" class="icon-btn" type="button">☰</button>
         <div>
-          <p class="tiny-label">Doctor Appointment</p>
-          <h1>Doc Time Saver</h1>
+          <p class="tiny-label">MedX</p>
+          <h1>Appointment Desk</h1>
         </div>
         <button id="refreshBtn" class="icon-btn" type="button">↻</button>
       </header>
 
       <aside id="drawer" class="drawer">
         <div class="drawer-head">
-          <h2>Menu</h2>
+          <h2>MedX.</h2>
           <button id="closeDrawer" class="icon-btn" type="button">✕</button>
         </div>
         <button class="drawer-link" data-screen="home">Appointments</button>
@@ -50,12 +50,12 @@
       <section id="view" class="view"></section>
 
       <nav class="bottom-nav">
-        <button class="nav-link active" data-screen="home">Home</button>
-        <button class="nav-link" data-screen="hospitals">Hospitals</button>
-        <button class="nav-link" data-screen="live">Live</button>
-        <button class="nav-link" data-screen="favorites">Favorites</button>
-        <button class="nav-link" data-screen="appointments">Schedule</button>
-        <button class="nav-link" data-screen="chat">Chat</button>
+        <button class="nav-link active" data-screen="home" aria-label="Home">⌂<span>Home</span></button>
+        <button class="nav-link" data-screen="appointments" aria-label="Schedule">▣<span>Schedule</span></button>
+        <button class="nav-link" data-screen="hospitals" aria-label="Hospitals">✚<span>Hospitals</span></button>
+        <button class="nav-link" data-screen="live" aria-label="Live Queue">♡<span>Live</span></button>
+        <button class="nav-link" data-screen="chat" aria-label="Chat">☏<span>Chat</span></button>
+        <button class="nav-link" data-screen="favorites" aria-label="Favorites">⚙<span>Saved</span></button>
       </nav>
     </main>
 
@@ -80,6 +80,6 @@
     </template>
 
     <script src="/config.js"></script>
-    <script src="/app.js" type="module"></script>
+    <script src="/app-v6.js" type="module"></script>
   </body>
 </html>
